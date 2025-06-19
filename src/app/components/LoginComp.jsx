@@ -72,7 +72,7 @@ const LoginComp = () => {
           Login
         </h2>
         <form onSubmit={handleLogin} className="space-y-6">
-          <div>
+          <div className="mb-4">
             <label htmlFor="email" className="block mb-1 text-gray-600">
               Email
             </label>
