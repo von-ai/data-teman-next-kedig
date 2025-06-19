@@ -5,10 +5,10 @@ import LoginComp from '../components/LoginComp';
 
 const Page = () => {
   return (
-    <div>
+    <>
       <LoginComp />
       {/* <Analytics /> */}
-    </div>
+    </>
   );
 };
 export default Page;
