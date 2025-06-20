@@ -1,21 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import toast, { Toaster } from 'react';
+import { useState } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import { Eye, EyeSlash } from 'iconsax-react';
-import { Link } from 'iconsax-react';
 
 const LoginComp = () => {
-  const [apiData, setApiData] = useState([]);
-
   const [formData, setFormData] = useState({
-    nama: '',
     email: '',
     password: '',
   });
 
   const [formErrors, setFormErrors] = useState({
-    nama: false,
     email: false,
     password: false,
   });
@@ -33,40 +28,49 @@ const LoginComp = () => {
     setPasswordVisible(!passwordVisible);
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const url = '//';
-        const response = await fetch(url);
-        const result = await response.json();
-        setApiData(result.data);
-      } catch (error) {
-        console.log('Error:', error);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    const user = apiData.find(
-      (user) =>
-        user.email === formData.email && user.password === formData.password
-    );
-    if (user) {
-      toast.success('login berhasil');
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 1000);
-    } else {
-      toast.error('Email atau Password Salah! Silakan cek kembali');
+    const { email, password } = formData;
+    if (!email || !password) {
+      setFormErrors({
+        email: !email,
+        password: !password,
+      });
+      toast.error('Mohon isi semua field');
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, password }),
+        }
+      );
+
+      const result = await response.json();
+      if (response.ok && result.success) {
+        toast.success('Login berhasil!');
+        setTimeout(() => {
+          window.location.href = '/home';
+        }, 1000);
+      } else {
+        toast.error(result?.data?.message || 'Email atau Password salah.');
+      }
+    } catch (error) {
+      toast.error('Terjadi kesalahan saat login.');
+      console.error('Login error:', error);
     }
   };
 
   return (
     <section className="flex items-center justify-center min-h-screen bg-gray-100 px-4">
-      {/* <Toaster position="top-right" /> */}
+      <Toaster />
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">
           Login
@@ -109,7 +113,6 @@ const LoginComp = () => {
               }`}
               placeholder="Your password"
             />
-
             <div
               onClick={togglePasswordVisibility}
               className="absolute right-3 top-10 cursor-pointer text-gray-500"

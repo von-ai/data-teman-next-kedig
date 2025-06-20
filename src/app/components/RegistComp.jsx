@@ -1,122 +1,129 @@
 'use client';
 
-import toast, { Toaster } from 'react-hot-toast';
 import React, { useState } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 import { Eye, EyeSlash } from 'iconsax-react';
 import { Link } from 'react-router-dom';
 
 const RegistComp = () => {
   const [formData, setFormData] = useState({
-    nama: '',
+    fullName: '',
     email: '',
     password: '',
-    confirmPassword: '',
+    confirmationPassword: '',
   });
 
   const [formErrors, setFormErrors] = useState({
-    nama: false,
+    fullName: false,
     email: false,
     password: false,
-    confirmPassword: false,
+    confirmationPassword: false,
   });
 
-  // State to track if password is visible or not
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-    // Reset form error when user starts typing in a field
-    setFormErrors({ ...formErrors, [name]: false });
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormErrors((prev) => ({ ...prev, [name]: false }));
   };
 
-  // Function to toggle password visibility
   const togglePasswordVisibility = () => {
-    setPasswordVisible(!passwordVisible);
+    setPasswordVisible((vis) => !vis);
   };
 
   const handleAddNewUser = async (e) => {
     e.preventDefault();
-    // cek value ada isinya atau tidak
-    const isFormValid = Object.values(formData).every((value) => value !== '');
-    if (!isFormValid) {
+
+    // Basic client-side validation
+    const isValid = Object.values(formData).every((val) => val.trim() !== '');
+    if (!isValid) {
       setFormErrors({
-        nama: formData.nama === '',
-        email: formData.email === '',
+        fullName: formData.fullName.trim() === '',
+        email: formData.email.trim() === '',
         password: formData.password === '',
-        confirmPassword: formData.confirmPassword === '',
+        confirmationPassword: formData.confirmationPassword === '',
       });
       return;
     }
-    // cek password sama atau nda
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Pasword dan konfirmasi password tidak sesuai.');
+
+    if (formData.password !== formData.confirmationPassword) {
+      toast.error('Password dan konfirmasi password tidak sesuai.');
       return;
     }
+
     try {
-      const url = '#';
+      const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/register`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Accept: 'application/json',
         },
-        body: JSON.stringify([
-          {
-            name: formData.nama,
-            email: formData.email,
-            password: formData.password,
-          },
-        ]),
+        body: JSON.stringify({
+          fullName: formData.fullName,
+          email: formData.email,
+          password: formData.password,
+          confirmationPassword: formData.confirmationPassword,
+        }),
       });
 
+      const data = await response.json();
       if (response.ok) {
-        const result = await response.json();
-        console.log('Data added successfully:', result);
-        toast.success('Akun Anda berhasil dibuat');
-
+        console.log('Registered:', data);
+        toast.success('Akun Anda berhasil dibuat.');
         setTimeout(() => {
           window.location.href = '/login';
         }, 1000);
       } else {
-        console.log('Failed to add data:', response.statusText);
+        // Show error message from backend if available
+        const rawMessage = data.message || data.error || 'Gagal registrasi';
+        const message =
+          typeof rawMessage === 'string'
+            ? rawMessage
+            : JSON.stringify(rawMessage);
+        toast.error(message);
       }
-    } catch (error) {
-      console.log('Error:', error);
+    } catch (err) {
+      console.log('Fetch error:', err);
+      toast.error('Terjadi kesalahan, silakan coba lagi.');
     }
   };
 
   return (
     <section>
-      {/* <Toaster /> */}
+      <Toaster />
       <div className="flex items-center justify-center min-h-screen bg-gray-100 px-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8 ">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
           <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">
             Register
           </h2>
           <form onSubmit={handleAddNewUser} className="space-y-6">
-            <div className="mb-4">
-              <label htmlFor="nama" className="block mb-1 text-gray-600">
+            {/* Full Name Field */}
+            <div>
+              <label htmlFor="fullName" className="block mb-1 text-gray-600">
                 Nama Lengkap:
               </label>
               <input
                 type="text"
-                name="nama"
-                id="nama"
-                value={formData.nama}
+                name="fullName"
+                id="fullName"
+                value={formData.fullName}
                 onChange={handleChange}
                 className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition ${
-                  formErrors.nama ? 'border-red-500' : 'border-gray-300'
+                  formErrors.fullName ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Fulan bin Fulan"
               />
-              {formErrors.nama && (
+              {formErrors.fullName && (
                 <p className="mt-1 text-sm text-red-500">
                   Nama lengkap harus diisi
                 </p>
               )}
             </div>
 
-            <div className="mb-4">
+            {/* Email Field */}
+            <div>
               <label htmlFor="email" className="block mb-1 text-gray-600">
                 Email:
               </label>
@@ -127,7 +134,7 @@ const RegistComp = () => {
                 value={formData.email}
                 onChange={handleChange}
                 className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition ${
-                  formErrors.email ? 'border-red-500' : 'border-gray-300'
+                  formErrors.fullName ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="you@example.com"
               />
@@ -136,22 +143,22 @@ const RegistComp = () => {
               )}
             </div>
 
+            {/* Password Field */}
             <div className="relative">
               <label htmlFor="password" className="block mb-1 text-gray-600">
                 Password:
               </label>
               <input
-                type={passwordVisible ? 'text' : 'password'} // Use text type if passwordVisible is true
+                type={passwordVisible ? 'text' : 'password'}
                 name="password"
                 id="password"
                 value={formData.password}
                 onChange={handleChange}
                 className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition ${
-                  formErrors.password ? 'border-red-500' : 'border-gray-300'
+                  formErrors.fullName ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Password"
               />
-
               <div
                 className="absolute right-3 top-10 cursor-pointer text-gray-500"
                 onClick={togglePasswordVisibility}
@@ -169,27 +176,25 @@ const RegistComp = () => {
               )}
             </div>
 
+            {/* Confirmation Password Field */}
             <div className="relative">
               <label
-                htmlFor="confirmPassword"
+                htmlFor="confirmationPassword"
                 className="block mb-1 text-gray-600"
               >
                 Konfirmasi Password:
               </label>
               <input
-                type={passwordVisible ? 'text' : 'password'} // Use text type if passwordVisible is true
-                name="confirmPassword"
-                id="confirmPassword"
-                value={formData.confirmPassword}
+                type={passwordVisible ? 'text' : 'password'}
+                name="confirmationPassword"
+                id="confirmationPassword"
+                value={formData.confirmationPassword}
                 onChange={handleChange}
                 className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition ${
-                  formErrors.confirmPassword
-                    ? 'border-red-500'
-                    : 'border-gray-300'
-                } `}
+                  formErrors.fullName ? 'border-red-500' : 'border-gray-300'
+                }`}
                 placeholder="Konfirmasi Password"
               />
-
               <div
                 className="absolute right-3 top-10 cursor-pointer text-gray-500"
                 onClick={togglePasswordVisibility}
@@ -200,13 +205,14 @@ const RegistComp = () => {
                   <EyeSlash size="20" color="#000000" />
                 )}
               </div>
-              {formErrors.confirmPassword && (
+              {formErrors.confirmationPassword && (
                 <p className="mt-1 text-sm text-red-500">
                   Konfirmasi Password harus diisi
                 </p>
               )}
             </div>
 
+            {/* Submit Button */}
             <button
               type="submit"
               className="w-full py-3 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-semibold transition"
@@ -215,7 +221,7 @@ const RegistComp = () => {
             </button>
           </form>
           <p className="mt-6 text-center text-gray-700">
-            <span>Sudah punya akun?</span>{' '}
+            Sudah punya akun?{' '}
             <a
               href="/login"
               className="font-medium text-blue-700 hover:underline"

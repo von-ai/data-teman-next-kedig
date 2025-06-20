@@ -5,11 +5,11 @@ import toast, { Toaster } from 'react-hot-toast';
 
 const AddData = () => {
   const [formData, setFormData] = useState({
-    nama: '',
-    deskripsi: '',
-    alamat: '',
-    tanggal_lahir: '',
-    gambar: '',
+    friendName: '',
+    description: '',
+    address: '',
+    birthDate: '',
+    photoLink: '',
   });
 
   const handleChange = (e) => {
@@ -19,21 +19,13 @@ const AddData = () => {
 
   const handleAddNewData = async () => {
     try {
-      const url = '#';
+      const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/data`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify([
-          {
-            name: formData.nama,
-            gambar: formData.gambar,
-            deksripsi: formData.deskripsi,
-            tanggal_lahir: formData.tanggal_lahir,
-            alamat: formData.alamat,
-          },
-        ]),
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
@@ -45,6 +37,7 @@ const AddData = () => {
           window.location.href = '/home';
         }, 1000);
       } else {
+        toast('Data tidak berhasil di Input');
         console.log('Failed to add data:', response.statusText);
       }
     } catch (error) {
@@ -62,9 +55,9 @@ const AddData = () => {
           </label>
           <input
             type="text"
-            name="nama"
+            name="friendName"
             id="nama"
-            value={formData.nama}
+            value={formData.friendName}
             onChange={handleChange}
             className="w-full border border-gray-300 rounded-md py-2 px-3 text-gray-800 focus:outline-none focus:border-blue-500"
           />
@@ -75,9 +68,9 @@ const AddData = () => {
           </label>
           <input
             type="text"
-            name="deskripsi"
+            name="description"
             id="deskripsi"
-            value={formData.deskripsi}
+            value={formData.description}
             onChange={handleChange}
             className="w-full border border-gray-300 rounded-md py-2 px-3 text-gray-800 focus:outline-none focus:border-blue-500"
           />
@@ -88,9 +81,9 @@ const AddData = () => {
           </label>
           <input
             type="text"
-            name="alamat"
+            name="address"
             id="alamat"
-            value={formData.alamat}
+            value={formData.address}
             onChange={handleChange}
             className="w-full border border-gray-300 rounded-md py-2 px-3 text-gray-800 focus:outline-none focus:border-blue-500"
           />
@@ -101,9 +94,9 @@ const AddData = () => {
           </label>
           <input
             type="date"
-            name="tanggal_lahir"
+            name="birthDate"
             id="tanggal_lahir"
-            value={formData.tanggal_lahir}
+            value={formData.birthDate}
             onChange={handleChange}
             className="w-full border border-gray-300 rounded-md py-2 px-3 text-gray-800 focus:outline-none focus:border-blue-500"
           />
@@ -114,9 +107,9 @@ const AddData = () => {
           </label>
           <input
             type="text"
-            name="gambar"
+            name="photoLink"
             id="gambar"
-            value={formData.gambar}
+            value={formData.photoLink}
             onChange={handleChange}
             className="w-full border border-gray-300 rounded-md py-2 px-3 text-gray-800 focus:outline-none focus:border-blue-500"
           />
