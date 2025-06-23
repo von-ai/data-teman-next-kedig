@@ -1,7 +1,6 @@
 'use client';
-
-// import { Logout } from 'iconsax-react';
 import React from 'react';
+import { LogOut } from 'lucide-react';
 
 export const Header = () => {
   const handleLogout = async () => {
@@ -13,7 +12,6 @@ export const Header = () => {
           credentials: 'include',
         }
       );
-
       if (!res.ok) throw new Error('Gagal logout');
       window.location.href = '/';
     } catch (err) {
@@ -23,25 +21,25 @@ export const Header = () => {
   };
 
   return (
-    <header className="bg-indigo-900 p-4 relative flex items-center justify-end">
-      <h2 className="absolute left-1/2 transform -translate-x-1/2 text-white text-[1.5rem] font-bold">
-        Data Teman
-      </h2>
-      <div className=" mr-8">
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg font-semibold transition-all"
-        >
-          Log out
-        </button>
+    <header className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-indigo-700 shadow-md px-6 py-4 rounded-b-2xl">
+      <div className="flex justify-between items-center">
+        <h1 className="text-white text-2xl sm:text-3xl font-bold tracking-wide drop-shadow-sm">
+          Data Teman
+        </h1>
+
+        <div className="flex items-center gap-3">
+          <span className="text-white hidden sm:inline font-medium">
+            Halo, Admin 💼
+          </span>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all duration-200"
+          >
+            <LogOut size={18} />
+            <span>Logout</span>
+          </button>
+        </div>
       </div>
-      {/* <div className="md:hidden">
-        <Logout
-          onClick={handleLogout}
-          color="white"
-          className="text-red-500 group-hover:text-red-600 transition cursor-pointer"
-        />
-      </div> */}
     </header>
   );
 };
