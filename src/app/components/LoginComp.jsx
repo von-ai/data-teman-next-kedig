@@ -49,6 +49,7 @@ const LoginComp = () => {
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify({ email, password }),
         }
       );
@@ -59,6 +60,7 @@ const LoginComp = () => {
         setTimeout(() => {
           window.location.href = '/home';
         }, 1000);
+        console.log(response);
       } else {
         toast.error(result?.data?.message || 'Email atau Password salah.');
       }

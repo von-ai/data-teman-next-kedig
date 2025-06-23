@@ -1,23 +1,38 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+// import { Link } from 'react-router-dom';
 import Image from 'next/image';
 // import noneImage from '../../../public/noneImage.svg';
 import { Toaster, toast } from 'react-hot-toast';
+import Link from 'next/link';
 
 const DataComp = () => {
   const [apiData, setApiData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const url = '#';
-        const response = await fetch(url);
+        const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/data`;
+        console.log('🔍 Fetching from:', url);
+
+        const response = await fetch(url, {
+          credentials: 'include',
+        });
         const result = await response.json();
-        console.log('Data dari API:', result);
-        setApiData(result.data);
-      } catch (error) {
-        console.log('Error:', error);
+        if (Array.isArray(result)) {
+          setApiData(result);
+        } else if (Array.isArray(result.data)) {
+          setApiData(result.data);
+        } else {
+          toast.error('⚠️ Format data tidak sesuai:', result);
+          setApiData([]);
+        }
+      } catch (err) {
+        console.error('❌ Gagal mengambil data dari server:', err);
+        toast.error('Gagal mengambil data');
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -26,12 +41,13 @@ const DataComp = () => {
 
   async function handleDelete(item) {
     try {
-      const res = await fetch('#', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/data`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify([item._id]),
+        credentials: 'include',
+        body: JSON.stringify([item.id]),
       });
       const data = await res.json();
       console.log(data);
@@ -39,7 +55,7 @@ const DataComp = () => {
       toast.success('data berhasil dihapus');
 
       setApiData((prevData) =>
-        prevData.filter((dataItem) => dataItem._id !== item._id)
+        prevData.filter((dataItem) => dataItem.id !== item.id)
       );
     } catch (error) {
       console.error('Error deleting item:', error);
@@ -73,40 +89,50 @@ const DataComp = () => {
       <section className="min-h-screen bg-gray-50 px-4 py-10">
         <Toaster position="top-right" />
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {apiData.map((item) => (
-            <div
-              key={item._id}
-              className="bg-white shadow-md rounded-xl overflow-hidden"
-            >
-              <Image
-                src={item.gambar || '../../../public/noneImage.svg'}
-                alt="Foto Temanmu"
-                className="w-full h-48 object-cover"
-              />
-              <div className="p-4 space-y-2">
-                <h2 className="text-xl font-bold text-gray-800">{item.name}</h2>
-                <p className="text-gray-600">Deskripsi: {item.deksripsi}</p>
-                <p className="text-gray-600">Alamat: {item.alamat}</p>
-                <p className="text-gray-600">
-                  Tanggal Lahir: {formatDate(item.tanggal_lahir)}
-                </p>
-                <div className="flex justify-between mt-4">
-                  <button
-                    onClick={() => handleDelete(item)}
-                    className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm"
-                  >
-                    Delete
-                  </button>
-                  <Link
-                    to={`/edit-data/${item._id}`}
-                    className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-sm"
-                  >
-                    Edit
-                  </Link>
+          {Array.isArray(apiData) &&
+            apiData.map((item, index) => (
+              <div
+                key={item.id || index}
+                className="bg-white shadow-md rounded-xl overflow-hidden"
+              >
+                <img
+                  src={item.photoLink || '/noneImage.svg'}
+                  width={300}
+                  height={400}
+                  alt="Foto Temanmu"
+                  className="w-full h-48 object-cover"
+                />
+                <div className="p-4 space-y-2">
+                  <h2 className="text-xl font-bold text-gray-800">
+                    {item.name}
+                  </h2>
+                  <p className="text-gray-600">Deskripsi: {item.description}</p>
+                  <p className="text-gray-600">Alamat: {item.address}</p>
+                  <p className="text-gray-600">
+                    Tanggal Lahir: {formatDate(item.birthDate)}
+                  </p>
+                  <div className="flex justify-between mt-4">
+                    <button
+                      onClick={() => handleDelete(item)}
+                      className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm"
+                    >
+                      Delete
+                    </button>
+                    {/* <a
+                      href={`/editData/${item.id}`}
+                      className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-sm"
+                    >
+                      Edit
+                    </a> */}
+                    <Link href={`/editData/${item.id}`}>
+                      <button className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-sm">
+                        Edit
+                      </button>
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </section>
     </>
