@@ -2,6 +2,7 @@
 import { AddCircle } from 'iconsax-react';
 import DataComp from './DataComp';
 import { Header } from './Header';
+import { useEffect } from 'react';
 
 const HomeComp = () => {
   return (

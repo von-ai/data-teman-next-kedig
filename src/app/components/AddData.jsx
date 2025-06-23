@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 // import { toast } from "react-toastify";
+import { fetchWithSessionRefresh } from '../utils/fetchWithSessionRefresh';
 
 const AddData = () => {
   const [formData, setFormData] = useState({
@@ -20,30 +21,30 @@ const AddData = () => {
   const handleAddNewData = async () => {
     try {
       const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/data`;
-      const response = await fetch(url, {
+      const response = await fetchWithSessionRefresh(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
         body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         const result = await response.json();
         console.log('Data added successfully:', result);
-        toast.success('data berhasil ditambahkan');
+        toast.success('Data berhasil ditambahkan');
 
         setTimeout(() => {
           window.location.href = '/home';
         }, 1000);
       } else {
-        toast('Data tidak berhasil di Input');
+        const err = await response.json();
+        toast.error(err.message || 'Data tidak berhasil diinput');
         console.log('Failed to add data:', response.statusText);
-        console.log(response);
       }
     } catch (error) {
       console.log('Error:', error);
+      toast.error('Terjadi kesalahan. Silakan coba lagi.');
     }
   };
 
