@@ -5,7 +5,7 @@ import toast, { Toaster } from 'react-hot-toast';
 
 const AddData = () => {
   const [formData, setFormData] = useState({
-    friendName: '',
+    name: '',
     description: '',
     address: '',
     birthDate: '',
@@ -25,6 +25,7 @@ const AddData = () => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(formData),
       });
 
@@ -39,6 +40,7 @@ const AddData = () => {
       } else {
         toast('Data tidak berhasil di Input');
         console.log('Failed to add data:', response.statusText);
+        console.log(response);
       }
     } catch (error) {
       console.log('Error:', error);
@@ -55,9 +57,9 @@ const AddData = () => {
           </label>
           <input
             type="text"
-            name="friendName"
+            name="name"
             id="nama"
-            value={formData.friendName}
+            value={formData.name}
             onChange={handleChange}
             className="w-full border border-gray-300 rounded-md py-2 px-3 text-gray-800 focus:outline-none focus:border-blue-500"
           />
