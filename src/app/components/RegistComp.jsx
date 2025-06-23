@@ -76,13 +76,14 @@ const RegistComp = () => {
           window.location.href = '/login';
         }, 1000);
       } else {
-        // Show error message from backend if available
-        const rawMessage = data.message || data.error || 'Gagal registrasi';
-        const message =
-          typeof rawMessage === 'string'
-            ? rawMessage
-            : JSON.stringify(rawMessage);
-        toast.error(message);
+        // const rawMessage = data.message || data.error || 'Gagal registrasi';
+        // const message =
+        //   typeof rawMessage === 'string'
+        //     ? rawMessage
+        //     : JSON.stringify(rawMessage);
+        toast.error(
+          'Password harus mengandung huruf besar, angka, dan karakter khusus'
+        );
       }
     } catch (err) {
       console.log('Fetch error:', err);

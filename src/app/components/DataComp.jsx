@@ -5,6 +5,7 @@ import Image from 'next/image';
 // import noneImage from '../../../public/noneImage.svg';
 import { Toaster, toast } from 'react-hot-toast';
 import Link from 'next/link';
+import { fetchWithSessionRefresh } from '@/app/utils/fetchWithSessionRefresh';
 
 const DataComp = () => {
   const [apiData, setApiData] = useState([]);
@@ -14,23 +15,23 @@ const DataComp = () => {
     const fetchData = async () => {
       try {
         const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/data`;
-        console.log('🔍 Fetching from:', url);
-
-        const response = await fetch(url, {
-          credentials: 'include',
+        const res = await fetchWithSessionRefresh(url, {
+          method: 'GET',
         });
-        const result = await response.json();
+
+        const result = await res.json();
         if (Array.isArray(result)) {
           setApiData(result);
         } else if (Array.isArray(result.data)) {
           setApiData(result.data);
         } else {
-          toast.error('⚠️ Format data tidak sesuai:', result);
+          toast.error('⚠️ Format data tidak sesuai');
           setApiData([]);
         }
       } catch (err) {
-        console.error('❌ Gagal mengambil data dari server:', err);
+        console.error('Gagal mengambil data dari server:', err);
         toast.error('Gagal mengambil data');
+        setApiData([]);
       } finally {
         setIsLoading(false);
       }
@@ -41,24 +42,32 @@ const DataComp = () => {
 
   async function handleDelete(item) {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/data`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify([item.id]),
-      });
-      const data = await res.json();
-      console.log(data);
+      const res = await fetchWithSessionRefresh(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/data/${item.id}`,
+        {
+          method: 'DELETE',
+        }
+      );
 
-      toast.success('data berhasil dihapus');
+      if (!res.ok) {
+        if (res.status === 404) {
+          toast.error('❌ Data tidak ditemukan');
+        } else if (res.status === 500) {
+          toast.error('💥 Server error, coba lagi nanti');
+        } else {
+          toast.error(`⚠️ Gagal hapus: ${res.status}`);
+        }
+        return;
+      }
+
+      toast.success('Data berhasil dihapus');
 
       setApiData((prevData) =>
         prevData.filter((dataItem) => dataItem.id !== item.id)
       );
     } catch (error) {
       console.error('Error deleting item:', error);
+      toast.error('Tidak dapat menghapus data. Periksa koneksi.');
     }
   }
 
@@ -77,11 +86,14 @@ const DataComp = () => {
       'November',
       'Desember',
     ];
-    const dateParts = dateString.split('-');
-    const year = dateParts[0];
-    const monthIndex = parseInt(dateParts[1]) - 1;
-    const day = dateParts[2];
-    const monthName = months[monthIndex];
+
+    const date = new Date(dateString);
+    if (isNaN(date)) return 'Tanggal tidak valid';
+
+    const day = date.getDate();
+    const monthName = months[date.getMonth()];
+    const year = date.getFullYear();
+
     return `${day} ${monthName} ${year}`;
   }
   return (
