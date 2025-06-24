@@ -93,7 +93,7 @@ const ProfileComp = () => {
             Ubah Profil
           </button>
           <button
-            onClick={() => router.push('/ubahPassword')}
+            onClick={() => router.push('/ubahPass')}
             className="w-full py-2 text-indigo-700 font-semibold border border-indigo-600 rounded-xl hover:bg-indigo-50 hover:shadow transition duration-200 shadow"
           >
             Ubah Password

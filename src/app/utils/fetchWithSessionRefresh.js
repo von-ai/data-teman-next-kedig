@@ -22,6 +22,8 @@ export const fetchWithSessionRefresh = async (url, options = {}) => {
       setTimeout(() => {
         window.location.href = '/login';
       });
+
+      //   console.log(res);
     }
   }
 
