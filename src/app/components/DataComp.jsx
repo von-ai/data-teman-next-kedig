@@ -1,14 +1,14 @@
 'use client';
 import React, { useEffect, useState } from 'react';
-// import { Link } from 'react-router-dom';
 import Image from 'next/image';
-// import noneImage from '../../../public/noneImage.svg';
 import { Toaster, toast } from 'react-hot-toast';
 import Link from 'next/link';
 import { fetchWithSessionRefresh } from '@/app/utils/fetchWithSessionRefresh';
+import SearchBarComp from './SearchBar';
 
 const DataComp = () => {
   const [apiData, setApiData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -20,18 +20,19 @@ const DataComp = () => {
         });
 
         const result = await res.json();
-        if (Array.isArray(result)) {
-          setApiData(result);
-        } else if (Array.isArray(result.data)) {
+        if (Array.isArray(result.data)) {
           setApiData(result.data);
+          setFilteredData(result.data);
         } else {
-          toast.error('⚠️ Format data tidak sesuai');
+          toast.error('Format data tidak sesuai');
           setApiData([]);
+          setFilteredData([]);
         }
       } catch (err) {
         console.error('Gagal mengambil data dari server:', err);
         toast.error('Gagal mengambil data');
         setApiData([]);
+        setFilteredData([]);
       } finally {
         setIsLoading(false);
       }
@@ -40,7 +41,14 @@ const DataComp = () => {
     fetchData();
   }, []);
 
-  async function handleDelete(item) {
+  const handleSearch = (keyword) => {
+    const result = apiData.filter((item) =>
+      item.name?.toLowerCase().includes(keyword.toLowerCase())
+    );
+    setFilteredData(result);
+  };
+
+  const handleDelete = async (item) => {
     try {
       const res = await fetchWithSessionRefresh(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/data/${item.id}`,
@@ -51,27 +59,26 @@ const DataComp = () => {
 
       if (!res.ok) {
         if (res.status === 404) {
-          toast.error('❌ Data tidak ditemukan');
+          toast.error('Data tidak ditemukan');
         } else if (res.status === 500) {
-          toast.error('💥 Server error, coba lagi nanti');
+          toast.error('Server error, coba lagi nanti');
         } else {
-          toast.error(`⚠️ Gagal hapus: ${res.status}`);
+          toast.error(`Gagal hapus: ${res.status}`);
         }
         return;
       }
 
       toast.success('Data berhasil dihapus');
 
-      setApiData((prevData) =>
-        prevData.filter((dataItem) => dataItem.id !== item.id)
-      );
+      setApiData((prev) => prev.filter((d) => d.id !== item.id));
+      setFilteredData((prev) => prev.filter((d) => d.id !== item.id));
     } catch (error) {
       console.error('Error deleting item:', error);
       toast.error('Tidak dapat menghapus data. Periksa koneksi.');
     }
-  }
+  };
 
-  function formatDate(dateString) {
+  const formatDate = (dateString) => {
     const months = [
       'Januari',
       'Februari',
@@ -86,7 +93,6 @@ const DataComp = () => {
       'November',
       'Desember',
     ];
-
     const date = new Date(dateString);
     if (isNaN(date)) return 'Tanggal tidak valid';
 
@@ -95,59 +101,56 @@ const DataComp = () => {
     const year = date.getFullYear();
 
     return `${day} ${monthName} ${year}`;
-  }
+  };
+
   return (
-    <>
-      <section className="min-h-screen bg-gray-50 px-4 py-10">
-        <Toaster position="top-right" />
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.isArray(apiData) &&
-            apiData.map((item, index) => (
-              <div
-                key={item.id || index}
-                className="bg-white shadow-md rounded-xl overflow-hidden"
-              >
-                <img
-                  src={item.photoLink || '/noneImage.svg'}
-                  width={300}
-                  height={400}
-                  alt="Foto Temanmu"
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-4 space-y-2">
-                  <h2 className="text-xl font-bold text-gray-800">
-                    {item.name}
-                  </h2>
-                  <p className="text-gray-600">Deskripsi: {item.description}</p>
-                  <p className="text-gray-600">Alamat: {item.address}</p>
-                  <p className="text-gray-600">
-                    Tanggal Lahir: {formatDate(item.birthDate)}
-                  </p>
-                  <div className="flex justify-between mt-4">
-                    <button
-                      onClick={() => handleDelete(item)}
-                      className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm"
-                    >
-                      Delete
-                    </button>
-                    {/* <a
-                      href={`/editData/${item.id}`}
-                      className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-sm"
-                    >
+    <section className="min-h-screen bg-white px-4 py-10">
+      <Toaster position="top-right" />
+      <div className="mb-6 flex justify-end pb-8">
+        <SearchBarComp onSearch={handleSearch} />
+      </div>
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {filteredData.length > 0 ? (
+          filteredData.map((item) => (
+            <div
+              key={item.id}
+              className="bg-white shadow-md rounded-xl overflow-hidden"
+            >
+              <img
+                src={item.photoLink || '/noneImage.svg'}
+                alt="Foto Temanmu"
+                className="w-full h-48 object-cover"
+              />
+              <div className="p-4 space-y-2">
+                <h2 className="text-xl font-bold text-gray-800">{item.name}</h2>
+                <p className="text-gray-600">Deskripsi: {item.description}</p>
+                <p className="text-gray-600">Alamat: {item.address}</p>
+                <p className="text-gray-600">
+                  Tanggal Lahir: {formatDate(item.birthDate)}
+                </p>
+                <div className="flex justify-between mt-4">
+                  <button
+                    onClick={() => handleDelete(item)}
+                    className="px-3 py-1 text-indigo-700 border border-indigo-600 hover:bg-indigo-50 hover:shadow transition duration-200  rounded-lg text-sm"
+                  >
+                    Delete
+                  </button>
+                  <Link href={`/editData/${item.id}`}>
+                    <button className="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white transition duration-200 rounded-lg text-sm">
                       Edit
-                    </a> */}
-                    <Link href={`/editData/${item.id}`}>
-                      <button className="px-3 py-1 bg-yellow-400 hover:bg-yellow-500 text-white rounded-lg text-sm">
-                        Edit
-                      </button>
-                    </Link>
-                  </div>
+                    </button>
+                  </Link>
                 </div>
               </div>
-            ))}
-        </div>
-      </section>
-    </>
+            </div>
+          ))
+        ) : (
+          <p className="text-gray-500 text-center col-span-full">
+            Tidak ada data ditemukan.
+          </p>
+        )}
+      </div>
+    </section>
   );
 };
 

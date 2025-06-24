@@ -21,7 +21,7 @@ const HomeComp = () => {
           setUserName('Teman ✨');
         }
       } catch (err) {
-        console.error('❌ Gagal ambil user:', err);
+        console.error('Gagal ambil user:', err);
         setUserName('Teman ✨');
       }
     };

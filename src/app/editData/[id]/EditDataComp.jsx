@@ -78,7 +78,7 @@ const EditDataComp = () => {
         router.push('/home');
       }, 2000);
     } catch (err) {
-      console.error('❌ Error updating:', err);
+      console.error('Error updating:', err);
       toast.error(err.message || 'Error saat update');
     }
   };
@@ -86,37 +86,53 @@ const EditDataComp = () => {
   if (loading) return <p className="text-center py-4">Loading…</p>;
 
   return (
-    <section className="max-w-md mx-auto bg-white p-10 md:p-6 rounded-md shadow-md">
-      <Toaster />
-      <form onSubmit={handleSubmit}>
-        {[
-          { label: 'Name', name: 'name', type: 'text' },
-          { label: 'Deskripsi', name: 'description', type: 'text' },
-          { label: 'Alamat', name: 'address', type: 'text' },
-          { label: 'Tanggal Lahir', name: 'birthDate', type: 'date' },
-          { label: 'Gambar (link)', name: 'photoLink', type: 'text' },
-        ].map(({ label, name, type }) => (
-          <div key={name} className="mb-4">
-            <label htmlFor={name} className="block text-gray-800">
-              {label}:
+    <section className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-white flex items-center justify-center px-4 py-12">
+      <Toaster position="top-center" />
+      <div className="w-full max-w-xl bg-white rounded-3xl shadow-2xl p-8 space-y-6">
+        <h2 className="text-3xl font-bold text-center text-indigo-800 tracking-wide">
+          Edit Data Teman
+        </h2>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {[
+            { label: 'Nama', name: 'name', type: 'text' },
+            { label: 'Deskripsi', name: 'description', type: 'text' },
+            { label: 'Alamat', name: 'address', type: 'text' },
+            { label: 'Tanggal Lahir', name: 'birthDate', type: 'date' },
+            { label: 'Gambar (link)', name: 'photoLink', type: 'text' },
+          ].map(({ label, name, type }) => (
+            <div key={name} className="flex flex-col gap-1">
+              <label htmlFor={name} className="text-gray-700 font-medium">
+                {label}
+              </label>
               <input
                 type={type}
                 name={name}
-                value={data[name] || ''}
+                id={name}
+                value={data[name]}
                 onChange={handleChange}
-                className="w-full border border-gray-300 rounded-md py-2 px-3 text-gray-800 focus:outline-none focus:border-blue-500"
+                className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-400 focus:outline-none text-gray-800 transition"
+                placeholder={`Masukkan ${label.toLowerCase()}`}
               />
-            </label>
-          </div>
-        ))}
+            </div>
+          ))}
 
-        <button
-          type="submit"
-          className="bg-indigo-700 text-white px-4 py-2 rounded-md hover:bg-indigo-800 focus:outline-none focus:bg-indigo-900 w-full"
-        >
-          Update Data
-        </button>
-      </form>
+          <button
+            type="submit"
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-lg rounded-xl transition shadow-md"
+          >
+            Simpan Perubahan
+          </button>
+
+          <button
+            type="button"
+            onClick={() => router.push('/home')}
+            className="w-full py-2 mt-2 border border-indigo-600 text-indigo-700 hover:bg-indigo-50 rounded-xl font-semibold transition"
+          >
+            Kembali
+          </button>
+        </form>
+      </div>
     </section>
   );
 };

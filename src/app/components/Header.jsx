@@ -1,8 +1,11 @@
 'use client';
 import React from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export const Header = () => {
+  const router = useRouter();
+
   const handleLogout = async () => {
     try {
       const res = await fetch(
@@ -15,7 +18,7 @@ export const Header = () => {
       if (!res.ok) throw new Error('Gagal logout');
       window.location.href = '/';
     } catch (err) {
-      console.error('❌ Logout error:', err);
+      console.error('Logout error:', err);
       alert('Logout gagal. Coba lagi ya~');
     }
   };
@@ -28,9 +31,14 @@ export const Header = () => {
         </h1>
 
         <div className="flex items-center gap-3">
-          <span className="text-white hidden sm:inline font-medium">
-            Halo, Admin 💼
-          </span>
+          <button
+            onClick={() => router.push('/profile')}
+            className="text-white font-medium hover:underline flex items-center gap-1 transition"
+          >
+            <User size={18} />
+            <span>Profile</span>
+          </button>
+
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-xl transition-all duration-200"

@@ -51,7 +51,7 @@ const AdminComp = () => {
 
         setLogs(json.data);
       } catch (err) {
-        console.error('❌ Gagal mengambil log:', err);
+        console.error('Gagal mengambil log:', err);
         toast.error('Gagal mengambil data log');
       } finally {
         setLoading(false);
