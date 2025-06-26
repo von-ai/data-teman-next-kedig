@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { Eye, EyeSlash } from "iconsax-react";
+import xss from "xss";
 
 const RegistComp = () => {
   const [formData, setFormData] = useState({
@@ -31,21 +32,124 @@ const RegistComp = () => {
 
   const [isInitializing, setIsInitializing] = useState(true);
 
+  const sanitizeInput = (input) => {
+    return xss(input.trim(), {
+      whiteList: {},
+      stripIgnoreTag: true,
+      stripIgnoreTagBody: ["script"],
+    });
+  };
+
+  const hasXSSAttempt = (original, sanitized) => {
+    return original.trim() !== sanitized;
+  };
+
+  const validateInputSafety = (input, fieldName) => {
+    const sanitized = sanitizeInput(input);
+    if (hasXSSAttempt(input, sanitized)) {
+      return `${fieldName} tidak valid`;
+    }
+    return null;
+  };
+
+  const validateFieldBasic = (name, value, formData) => {
+    const sanitizedValue = name.includes("password")
+      ? value
+      : sanitizeInput(value);
+
+    switch (name) {
+      case "fullName":
+        if (!sanitizedValue || sanitizedValue.trim() === "") {
+          return "Nama lengkap harus diisi";
+        }
+        if (sanitizedValue.length > 191) {
+          return "Nama lengkap terlalu panjang (maksimal 191 karakter)";
+        }
+        const namePattern = /^[A-Za-zÀ-ÿ]+(?:[' -][A-Za-zÀ-ÿ]+)*$/;
+        if (!namePattern.test(sanitizedValue)) {
+          return "Nama hanya boleh mengandung huruf, spasi, tanda kutip, dan tanda hubung";
+        }
+        return "";
+
+      case "email":
+        if (!sanitizedValue || sanitizedValue.trim() === "") {
+          return "Email harus diisi";
+        }
+        if (sanitizedValue.length > 191) {
+          return "Email terlalu panjang (maksimal 191 karakter)";
+        }
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(sanitizedValue)) {
+          return "Format email tidak valid";
+        }
+        return "";
+
+      case "password":
+        if (!value) {
+          return "Password harus diisi";
+        }
+        if (value.length < 8) {
+          return "Password minimal 8 karakter";
+        }
+        if (value.length > 191) {
+          return "Password terlalu panjang (maksimal 191 karakter)";
+        }
+        const passwordPattern =
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+        if (!passwordPattern.test(value)) {
+          return "Password harus mengandung huruf kecil, huruf besar, angka, dan karakter khusus";
+        }
+        return "";
+
+      case "confirmationPassword":
+        if (!value) {
+          return "Konfirmasi password harus diisi";
+        }
+        if (value !== formData.password) {
+          return "Konfirmasi password tidak sama dengan password";
+        }
+        return "";
+
+      default:
+        return "";
+    }
+  };
+
+  const validateFieldComplete = (name, value, formData) => {
+    const xssError = validateInputSafety(value, name);
+    if (xssError) {
+      return xssError;
+    }
+
+    return validateFieldBasic(name, value, formData);
+  };
+
   useEffect(() => {
     const savedOtpState = localStorage.getItem("otp_verification_state");
     if (savedOtpState) {
-      const { email, timestamp } = JSON.parse(savedOtpState);
-      const now = Date.now();
-      if (now - timestamp < 600000) {
-        setIsOtpSent(true);
-        setUserEmail(email);
+      try {
+        const parsed = JSON.parse(savedOtpState);
+        const { email, timestamp } = parsed;
 
-        const timeSinceOtp = Math.floor((now - timestamp) / 1000);
-        if (timeSinceOtp < 3) {
-          setResendTimer(3 - timeSinceOtp);
-          setCanResend(false);
+        const sanitizedEmail = sanitizeInput(email);
+        if (hasXSSAttempt(email, sanitizedEmail)) {
+          localStorage.removeItem("otp_verification_state");
+        } else {
+          const now = Date.now();
+          if (now - timestamp < 600000) {
+            setIsOtpSent(true);
+            setUserEmail(sanitizedEmail);
+
+            const timeSinceOtp = Math.floor((now - timestamp) / 1000);
+            if (timeSinceOtp < 3) {
+              setResendTimer(3 - timeSinceOtp);
+              setCanResend(false);
+            }
+          } else {
+            localStorage.removeItem("otp_verification_state");
+          }
         }
-      } else {
+      } catch (error) {
         localStorage.removeItem("otp_verification_state");
       }
     }
@@ -75,18 +179,18 @@ const RegistComp = () => {
       const EXPIRY_DURATION_MS = 2.5 * 60 * 1000;
 
       if (savedOtpState) {
-        const { timestamp } = JSON.parse(savedOtpState);
+        try {
+          const { timestamp } = JSON.parse(savedOtpState);
+          const now = Date.now();
 
-        const now = Date.now();
-        // const age = now - timestamp;
-        // console.log("Selisih waktu:", age);
-
-        // const now = Date.now();
-        if (now - timestamp >= EXPIRY_DURATION_MS) {
+          if (now - timestamp >= EXPIRY_DURATION_MS) {
+            localStorage.removeItem("otp_verification_state");
+            setIsOtpSent(false);
+            setOtpCode("");
+            setUserEmail("");
+          }
+        } catch (error) {
           localStorage.removeItem("otp_verification_state");
-          setIsOtpSent(false);
-          setOtpCode("");
-          setUserEmail("");
         }
       }
     }, 30 * 1000);
@@ -121,65 +225,12 @@ const RegistComp = () => {
     return defaultMessages[context] || "Terjadi kesalahan. Silakan coba lagi.";
   };
 
-  const validateField = (name, value, formData) => {
-    switch (name) {
-      case "fullName":
-        if (!value || value.trim() === "") {
-          return "Nama lengkap harus diisi";
-        }
-        if (value.length > 191) {
-          return "Nama lengkap terlalu panjang (maksimal 191 karakter)";
-        }
-        const namePattern = /^[A-Za-zÀ-ÿ]+(?:[' -][A-Za-zÀ-ÿ]+)*$/;
-        if (!namePattern.test(value)) {
-          return "Nama hanya boleh mengandung huruf, spasi, tanda kutip, dan tanda hubung";
-        }
-        return "";
-
-      case "email":
-        if (!value || value.trim() === "") {
-          return "Email harus diisi";
-        }
-        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailPattern.test(value)) {
-          return "Format email tidak valid";
-        }
-        return "";
-
-      case "password":
-        if (!value) {
-          return "Password harus diisi";
-        }
-        if (value.length < 8) {
-          return "Password minimal 8 karakter";
-        }
-        const passwordPattern =
-          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
-        if (!passwordPattern.test(value)) {
-          return "Password harus mengandung huruf kecil, huruf besar, angka, dan karakter khusus";
-        }
-        return "";
-
-      case "confirmationPassword":
-        if (!value) {
-          return "Konfirmasi password harus diisi";
-        }
-        if (value !== formData.password) {
-          return "Konfirmasi password tidak sama dengan password";
-        }
-        return "";
-
-      default:
-        return "";
-    }
-  };
-
-  const validateForm = () => {
+  const validateFormForSubmit = () => {
     const errors = {};
     let isValid = true;
 
     Object.keys(formData).forEach((key) => {
-      const error = validateField(key, formData[key], formData);
+      const error = validateFieldComplete(key, formData[key], formData);
       errors[key] = error;
       if (error) isValid = false;
     });
@@ -190,9 +241,17 @@ const RegistComp = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (value.length > 255) {
+      return;
+    }
+
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    const error = validateField(name, value, { ...formData, [name]: value });
+    const error = validateFieldBasic(name, value, {
+      ...formData,
+      [name]: value,
+    });
     setFormErrors((prev) => ({ ...prev, [name]: error }));
   };
 
@@ -200,36 +259,49 @@ const RegistComp = () => {
     setPasswordVisible((vis) => !vis);
   };
 
+  const prepareSanitizedData = (formData) => {
+    return {
+      fullName: sanitizeInput(formData.fullName),
+      email: sanitizeInput(formData.email),
+      password: formData.password,
+      confirmationPassword: formData.confirmationPassword,
+    };
+  };
+
   const handleAddNewUser = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!validateFormForSubmit()) {
       toast.error("Periksa data yang Anda masukkan");
       return;
     }
 
     try {
+      const sanitizedData = prepareSanitizedData(formData);
+
       const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/register`;
       const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
+          "X-Requested-With": "XMLHttpRequest",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(sanitizedData),
       });
 
       const data = await response.json();
 
       if (response.ok) {
         toast.success("Kode OTP telah dikirim ke email Anda!");
-        setUserEmail(formData.email);
+        const sanitizedEmail = sanitizeInput(formData.email);
+        setUserEmail(sanitizedEmail);
         setIsOtpSent(true);
 
         localStorage.setItem(
           "otp_verification_state",
           JSON.stringify({
-            email: formData.email,
+            email: sanitizedEmail,
             timestamp: Date.now(),
           })
         );
@@ -250,7 +322,7 @@ const RegistComp = () => {
         }
       }
     } catch (err) {
-      console.log("Network error:");
+      console.error("Network error:", err);
       toast.error("Terjadi kesalahan jaringan. Silakan coba lagi.");
     }
   };
@@ -268,12 +340,23 @@ const RegistComp = () => {
       return;
     }
 
+    if (!/^\d{6}$/.test(otpCode)) {
+      toast.error("Kode OTP hanya boleh berisi angka");
+      return;
+    }
+
     try {
       const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/register/verify`;
       const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: userEmail, otpCode }),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          otpCode: otpCode.trim(),
+        }),
       });
 
       const data = await response.json();
@@ -288,7 +371,7 @@ const RegistComp = () => {
         const errorMsg = getErrorMessage(data, "verify");
 
         if (errorMsg.includes("OTP is invalid or has expired.")) {
-          toast.error("silahkan coba registrasi ulang");
+          toast.error("Silahkan coba registrasi ulang");
           localStorage.removeItem("otp_verification_state");
           handleBackToRegister();
         } else if (response.status === 400) {
@@ -306,8 +389,7 @@ const RegistComp = () => {
         }
       }
     } catch (err) {
-      // console.log("Network error:", err);
-      // toast.error(getErrorMessage(err, "network"));
+      console.error("Network error:", err);
       toast.error("Server error. Silakan coba lagi nanti.");
     }
   };
@@ -324,7 +406,10 @@ const RegistComp = () => {
       const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/register/resend-otp`;
       const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
         body: JSON.stringify({ email: userEmail }),
       });
 
@@ -363,12 +448,11 @@ const RegistComp = () => {
         } else if (response.status === 500) {
           toast.error("Terjadi kesalahan server. Silakan coba lagi nanti.");
         } else {
-          // toast.error(getErrorMessage(data, "resend"));
           toast.error("Server error. Silakan coba lagi nanti.");
         }
       }
     } catch (err) {
-      // console.log("Network error:", err);
+      console.error("Network error:", err);
       toast.error("Server error. Silakan coba lagi nanti.");
     }
   };
@@ -379,6 +463,13 @@ const RegistComp = () => {
     setResendTimer(0);
     setCanResend(true);
     localStorage.removeItem("otp_verification_state");
+  };
+
+  const handleOtpChange = (e) => {
+    const value = e.target.value.replace(/\D/g, "");
+    if (value.length <= 6) {
+      setOtpCode(value);
+    }
   };
 
   return (
@@ -444,13 +535,13 @@ const RegistComp = () => {
                       id="otpCode"
                       name="otpCode"
                       value={otpCode}
-                      onChange={(e) =>
-                        setOtpCode(e.target.value.replace(/\D/g, ""))
-                      }
+                      onChange={handleOtpChange}
                       className="w-full px-4 py-3 text-lg tracking-widest text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="000000"
                       maxLength="6"
                       inputMode="numeric"
+                      autoComplete="one-time-code"
+                      spellCheck="false"
                     />
                     <p className="mt-2 text-xs text-center text-gray-500">
                       Periksa folder spam jika tidak ditemukan di inbox
@@ -467,7 +558,7 @@ const RegistComp = () => {
                   <button
                     type="button"
                     onClick={handleBackToRegister}
-                    className="w-full py-2 !mt-3 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    className="w-full py-2 !mt-3 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-gray-300"
                   >
                     Kembali ke Registrasi
                   </button>
@@ -480,7 +571,7 @@ const RegistComp = () => {
                       <button
                         type="button"
                         onClick={handleResendOtp}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                        className="text-sm font-medium text-blue-600 rounded hover:text-blue-800 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400"
                       >
                         Kirim ulang OTP
                       </button>
@@ -506,6 +597,9 @@ const RegistComp = () => {
                       id="fullName"
                       value={formData.fullName}
                       onChange={handleChange}
+                      maxLength={255}
+                      autoComplete="name"
+                      spellCheck="false"
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
                         formErrors.fullName
                           ? "border-red-500"
@@ -513,6 +607,11 @@ const RegistComp = () => {
                       }`}
                       placeholder="Fulan bin Fulan"
                     />
+                    {formData.fullName.length >= 240 && (
+                      <span className="text-xs text-orange-500">
+                        Mendekati batas maksimal karakter!
+                      </span>
+                    )}
                     {formErrors.fullName && (
                       <p className="mt-1 text-sm text-red-500">
                         {formErrors.fullName}
@@ -530,11 +629,19 @@ const RegistComp = () => {
                       id="email"
                       value={formData.email}
                       onChange={handleChange}
+                      maxLength={255}
+                      autoComplete="email"
+                      spellCheck="false"
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
                         formErrors.email ? "border-red-500" : "border-gray-300"
                       }`}
                       placeholder="you@example.com"
                     />
+                    {formData.email.length >= 240 && (
+                      <span className="text-xs text-orange-500">
+                        Mendekati batas maksimal karakter!
+                      </span>
+                    )}
                     {formErrors.email && (
                       <p className="mt-1 text-sm text-red-500">
                         {formErrors.email}
@@ -555,6 +662,9 @@ const RegistComp = () => {
                       id="password"
                       value={formData.password}
                       onChange={handleChange}
+                      maxLength={255}
+                      autoComplete="new-password"
+                      spellCheck="false"
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
                         formErrors.password
                           ? "border-red-500"
@@ -565,6 +675,13 @@ const RegistComp = () => {
                     <div
                       className="absolute text-gray-500 cursor-pointer right-3 top-10"
                       onClick={togglePasswordVisibility}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          togglePasswordVisibility();
+                        }
+                      }}
                     >
                       {passwordVisible ? (
                         <Eye size="20" color="#000000" />
@@ -572,6 +689,11 @@ const RegistComp = () => {
                         <EyeSlash size="20" color="#000000" />
                       )}
                     </div>
+                    {formData.password.length >= 240 && (
+                      <span className="text-xs text-orange-500">
+                        Mendekati batas maksimal karakter!
+                      </span>
+                    )}
                     {formErrors.password && (
                       <p className="mt-1 text-sm text-red-500">
                         {formErrors.password}
@@ -592,6 +714,9 @@ const RegistComp = () => {
                       id="confirmationPassword"
                       value={formData.confirmationPassword}
                       onChange={handleChange}
+                      maxLength={255}
+                      autoComplete="new-password"
+                      spellCheck="false"
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
                         formErrors.confirmationPassword
                           ? "border-red-500"
@@ -602,6 +727,13 @@ const RegistComp = () => {
                     <div
                       className="absolute text-gray-500 cursor-pointer right-3 top-10"
                       onClick={togglePasswordVisibility}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          togglePasswordVisibility();
+                        }
+                      }}
                     >
                       {passwordVisible ? (
                         <Eye size="20" color="#000000" />
@@ -609,6 +741,11 @@ const RegistComp = () => {
                         <EyeSlash size="20" color="#000000" />
                       )}
                     </div>
+                    {formData.confirmationPassword.length >= 240 && (
+                      <span className="text-xs text-orange-500">
+                        Mendekati batas maksimal karakter!
+                      </span>
+                    )}
                     {formErrors.confirmationPassword && (
                       <p className="mt-1 text-sm text-red-500">
                         {formErrors.confirmationPassword}
@@ -627,7 +764,7 @@ const RegistComp = () => {
                     <span>Sudah punya akun?</span>{" "}
                     <a
                       href="/login"
-                      className="font-medium text-blue-700 hover:underline"
+                      className="font-medium text-blue-700 rounded hover:underline focus:outline-none focus:ring-2 focus:ring-blue-400"
                     >
                       Login
                     </a>
