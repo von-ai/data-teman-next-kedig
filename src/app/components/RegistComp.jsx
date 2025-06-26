@@ -69,6 +69,31 @@ const RegistComp = () => {
     }
   }, [resendTimer]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const savedOtpState = localStorage.getItem("otp_verification_state");
+      const EXPIRY_DURATION_MS = 0.5 * 60 * 1000;
+
+      if (savedOtpState) {
+        const { timestamp } = JSON.parse(savedOtpState);
+
+        const now = Date.now();
+        // const age = now - timestamp;
+        // console.log("Selisih waktu:", age);
+
+        // const now = Date.now();
+        if (now - timestamp >= EXPIRY_DURATION_MS) {
+          localStorage.removeItem("otp_verification_state");
+          setIsOtpSent(false);
+          setOtpCode("");
+          setUserEmail("");
+        }
+      }
+    }, 1 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const getErrorMessage = (error, context = "") => {
     if (typeof error === "string") {
       return error;
@@ -216,13 +241,17 @@ const RegistComp = () => {
           toast.error("Email sudah terdaftar. Silakan gunakan email lain.");
         } else if (response.status === 400) {
           toast.error("Data yang Anda masukkan tidak valid. Periksa kembali.");
+        } else if (response.status === 429) {
+          toast.error("Terlalu banyak percobaan. Coba lagi nanti.");
+        } else if (response.status === 500) {
+          toast.error("Terjadi kesalahan server. Silakan coba lagi nanti.");
         } else {
           toast.error(getErrorMessage(data, "register"));
         }
       }
     } catch (err) {
-      console.log("Network error:", err);
-      toast.error(getErrorMessage(err, "network"));
+      console.log("Network error:");
+      toast.error("Terjadi kesalahan jaringan. Silakan coba lagi.");
     }
   };
 
@@ -247,6 +276,12 @@ const RegistComp = () => {
         body: JSON.stringify({ email: userEmail, otpCode }),
       });
 
+      if (errorMsg.includes("OTP is invalid or has expired.")) {
+        toast.error("silahkan coba registrasi ulang");
+        localStorage.removeItem("otp_verification_state");
+        handleBackToRegister();
+      }
+
       const data = await response.json();
 
       if (response.ok) {
@@ -269,6 +304,8 @@ const RegistComp = () => {
           toast.error("Email tidak ditemukan. Silakan registrasi ulang.");
         } else if (response.status === 429) {
           toast.error("Terlalu banyak percobaan. Coba lagi nanti.");
+        } else if (response.status === 500) {
+          toast.error("Terjadi kesalahan server. Silakan coba lagi nanti.");
         } else {
           toast.error(getErrorMessage(data, "verify"));
         }
@@ -327,6 +364,8 @@ const RegistComp = () => {
               "Terlalu banyak permintaan. Tunggu beberapa saat lagi!"
             );
           }
+        } else if (response.status === 500) {
+          toast.error("Terjadi kesalahan server. Silakan coba lagi nanti.");
         } else {
           toast.error(getErrorMessage(data, "resend"));
         }
