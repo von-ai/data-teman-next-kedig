@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import toast, { Toaster } from 'react-hot-toast';
-import { Eye, EyeSlash } from 'iconsax-react';
+import { useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
+import { Eye, EyeSlash } from "iconsax-react";
 
 const LoginComp = () => {
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
 
   const [formErrors, setFormErrors] = useState({
@@ -37,7 +37,7 @@ const LoginComp = () => {
         email: !email,
         password: !password,
       });
-      toast.error('Mohon isi semua field');
+      toast.error("Mohon isi semua field");
       return;
     }
 
@@ -45,36 +45,38 @@ const LoginComp = () => {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
-          credentials: 'include',
+          credentials: "include",
           body: JSON.stringify({ email, password }),
         }
       );
 
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success('Login berhasil!');
+        toast.success("Login berhasil!");
         setTimeout(() => {
-          window.location.href = '/home';
+          window.location.href = "/home";
         }, 1000);
         console.log(response);
+      } else if (response.status === 401) {
+        toast.error("Kredensial tidak valid. Silakan coba lagi.");
       } else {
-        toast.error(result?.data?.message || 'Email atau Password salah.');
+        toast.error("Server error. Silakan coba lagi nanti.");
       }
     } catch (error) {
-      toast.error('Terjadi kesalahan saat login.');
-      console.error('Login error:', error);
+      toast.error("Server error. Silakan coba lagi nanti.");
+      // console.error("Login error:", error);
     }
   };
 
   return (
-    <section className="flex items-center justify-center min-h-screen bg-gradient-to-b from-indigo-50 via-white to-white px-4">
+    <section className="flex items-center justify-center min-h-screen px-4 bg-gradient-to-b from-indigo-50 via-white to-white">
       <Toaster />
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">
+      <div className="w-full max-w-md p-8 bg-white shadow-lg rounded-2xl">
+        <h2 className="mb-6 text-3xl font-bold text-center text-gray-800">
           Login
         </h2>
         <form onSubmit={handleLogin} className="space-y-6">
@@ -89,7 +91,7 @@ const LoginComp = () => {
               value={formData.email}
               onChange={handleChange}
               className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition ${
-                formErrors.email ? 'border-red-500' : 'border-gray-300'
+                formErrors.email ? "border-red-500" : "border-gray-300"
               }`}
               placeholder="you@example.com"
             />
@@ -105,19 +107,19 @@ const LoginComp = () => {
               Password
             </label>
             <input
-              type={passwordVisible ? 'text' : 'password'}
+              type={passwordVisible ? "text" : "password"}
               name="password"
               id="password"
               value={formData.password}
               onChange={handleChange}
               className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition ${
-                formErrors.password ? 'border-red-500' : 'border-gray-300'
+                formErrors.password ? "border-red-500" : "border-gray-300"
               }`}
               placeholder="Your password"
             />
             <div
               onClick={togglePasswordVisibility}
-              className="absolute right-3 top-10 cursor-pointer text-gray-500"
+              className="absolute text-gray-500 cursor-pointer right-3 top-10"
             >
               {passwordVisible ? (
                 <Eye size="20" color="#000000" />
@@ -132,13 +134,13 @@ const LoginComp = () => {
 
           <button
             type="submit"
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white font-semibold transition"
+            className="w-full py-3 font-semibold text-white transition bg-indigo-600 rounded-lg hover:bg-indigo-700"
           >
             Login
           </button>
         </form>
         <p className="mt-6 text-center text-gray-700">
-          <span>Belum punya akun?</span>{' '}
+          <span>Belum punya akun?</span>{" "}
           <a
             href="/register"
             className="font-medium text-blue-700 hover:underline"

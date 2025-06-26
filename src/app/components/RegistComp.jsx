@@ -306,8 +306,9 @@ const RegistComp = () => {
         }
       }
     } catch (err) {
-      console.log("Network error:", err);
-      toast.error(getErrorMessage(err, "network"));
+      // console.log("Network error:", err);
+      // toast.error(getErrorMessage(err, "network"));
+      toast.error("Server error. Silakan coba lagi nanti.");
     }
   };
 
@@ -362,12 +363,13 @@ const RegistComp = () => {
         } else if (response.status === 500) {
           toast.error("Terjadi kesalahan server. Silakan coba lagi nanti.");
         } else {
-          toast.error(getErrorMessage(data, "resend"));
+          // toast.error(getErrorMessage(data, "resend"));
+          toast.error("Server error. Silakan coba lagi nanti.");
         }
       }
     } catch (err) {
-      console.log("Network error:", err);
-      toast.error("Terjadi kesalahan jaringan. Silakan coba lagi.");
+      // console.log("Network error:", err);
+      toast.error("Server error. Silakan coba lagi nanti.");
     }
   };
 
