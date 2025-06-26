@@ -13,10 +13,10 @@ const RegistComp = () => {
   });
 
   const [formErrors, setFormErrors] = useState({
-    fullName: false,
-    email: false,
-    password: false,
-    confirmationPassword: false,
+    fullName: "",
+    email: "",
+    password: "",
+    confirmationPassword: "",
   });
 
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -69,29 +69,106 @@ const RegistComp = () => {
     }
   }, [resendTimer]);
 
-  const getErrorMessage = (err) => {
-    if (!err) return "Terjadi kesalahan";
-    if (typeof err === "string") return err;
-    if (typeof err === "object") {
-      if (err.message) return err.message;
-      if (err.error) {
-        if (typeof err.error === "string") return err.error;
-        if (err.error.message) return err.error.message;
-        return JSON.stringify(err.error);
-      }
-      try {
-        return JSON.stringify(err);
-      } catch {
-        return "Unknown error";
-      }
+  const getErrorMessage = (error, context = "") => {
+    if (typeof error === "string") {
+      return error;
     }
-    return "Terjadi kesalahan";
+
+    if (error?.message) {
+      return error.message;
+    }
+
+    if (error?.error?.message) {
+      return error.error.message;
+    }
+
+    if (typeof error?.error === "string") {
+      return error.error;
+    }
+
+    const defaultMessages = {
+      register: "Gagal mendaftar. Silakan coba lagi.",
+      verify: "Gagal memverifikasi OTP. Silakan coba lagi.",
+      resend: "Gagal mengirim ulang OTP. Silakan coba lagi.",
+      network: "Koneksi bermasalah. Periksa internet Anda.",
+    };
+
+    return defaultMessages[context] || "Terjadi kesalahan. Silakan coba lagi.";
+  };
+
+  const validateField = (name, value, formData) => {
+    switch (name) {
+      case "fullName":
+        if (!value || value.trim() === "") {
+          return "Nama lengkap harus diisi";
+        }
+        if (value.length > 191) {
+          return "Nama lengkap terlalu panjang (maksimal 191 karakter)";
+        }
+        const namePattern = /^[A-Za-zÀ-ÿ]+(?:[' -][A-Za-zÀ-ÿ]+)*$/;
+        if (!namePattern.test(value)) {
+          return "Nama hanya boleh mengandung huruf, spasi, tanda kutip, dan tanda hubung";
+        }
+        return "";
+
+      case "email":
+        if (!value || value.trim() === "") {
+          return "Email harus diisi";
+        }
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(value)) {
+          return "Format email tidak valid";
+        }
+        return "";
+
+      case "password":
+        if (!value) {
+          return "Password harus diisi";
+        }
+        if (value.length < 8) {
+          return "Password minimal 8 karakter";
+        }
+        const passwordPattern =
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+        if (!passwordPattern.test(value)) {
+          return "Password harus mengandung huruf kecil, huruf besar, angka, dan karakter khusus";
+        }
+        return "";
+
+      case "confirmationPassword":
+        if (!value) {
+          return "Konfirmasi password harus diisi";
+        }
+        if (value !== formData.password) {
+          return "Konfirmasi password tidak sama dengan password";
+        }
+        return "";
+
+      default:
+        return "";
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    let isValid = true;
+
+    Object.keys(formData).forEach((key) => {
+      const error = validateField(key, formData[key], formData);
+      errors[key] = error;
+      if (error) isValid = false;
+    });
+
+    setFormErrors(errors);
+    return isValid;
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    setFormErrors((prev) => ({ ...prev, [name]: false }));
+
+    const error = validateField(name, value, { ...formData, [name]: value });
+    setFormErrors((prev) => ({ ...prev, [name]: error }));
   };
 
   const togglePasswordVisibility = () => {
@@ -101,19 +178,8 @@ const RegistComp = () => {
   const handleAddNewUser = async (e) => {
     e.preventDefault();
 
-    const isValid = Object.values(formData).every((val) => val.trim() !== "");
-    if (!isValid) {
-      setFormErrors({
-        fullName: formData.fullName.trim() === "",
-        email: formData.email.trim() === "",
-        password: formData.password === "",
-        confirmationPassword: formData.confirmationPassword === "",
-      });
-      return;
-    }
-
-    if (formData.password !== formData.confirmationPassword) {
-      toast.error("Password dan konfirmasi password tidak sesuai.");
+    if (!validateForm()) {
+      toast.error("Periksa data yang Anda masukkan");
       return;
     }
 
@@ -129,8 +195,9 @@ const RegistComp = () => {
       });
 
       const data = await response.json();
+
       if (response.ok) {
-        toast.success("OTP dikirim ke email Anda");
+        toast.success("Kode OTP telah dikirim ke email Anda!");
         setUserEmail(formData.email);
         setIsOtpSent(true);
 
@@ -145,18 +212,30 @@ const RegistComp = () => {
         setResendTimer(OTP_RESEND_WAIT_SECONDS);
         setCanResend(false);
       } else {
-        toast.error(getErrorMessage(data));
+        if (response.status === 409) {
+          toast.error("Email sudah terdaftar. Silakan gunakan email lain.");
+        } else if (response.status === 400) {
+          toast.error("Data yang Anda masukkan tidak valid. Periksa kembali.");
+        } else {
+          toast.error(getErrorMessage(data, "register"));
+        }
       }
     } catch (err) {
-      console.log("Fetch error:", err);
-      toast.error(getErrorMessage(err));
+      console.log("Network error:", err);
+      toast.error(getErrorMessage(err, "network"));
     }
   };
 
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    if (!otpCode) {
-      toast.error("Kode OTP wajib diisi");
+
+    if (!otpCode || otpCode.trim() === "") {
+      toast.error("Masukkan kode OTP terlebih dahulu");
+      return;
+    }
+
+    if (otpCode.length !== 6) {
+      toast.error("Kode OTP harus 6 digit");
       return;
     }
 
@@ -169,27 +248,42 @@ const RegistComp = () => {
       });
 
       const data = await response.json();
+
       if (response.ok) {
-        toast.success("Registrasi berhasil. Silakan login.");
-        // Hapus state OTP dari localStorage setelah berhasil
+        toast.success("Registrasi berhasil! Selamat datang!");
         localStorage.removeItem("otp_verification_state");
         setTimeout(() => {
           window.location.href = "/login";
         }, 1500);
       } else {
-        toast.error(getErrorMessage(data));
+        const errorMsg = getErrorMessage(data, "verify");
+
+        if (errorMsg.includes("OTP is invalid or has expired.")) {
+          toast.error("silahkan coba registrasi ulang");
+          handleBackToRegister();
+        } else if (response.status === 400) {
+          toast.error("Kode OTP tidak valid atau sudah kedaluwarsa");
+        } else if (response.status === 401) {
+          toast.error("Kode OTP tidak valid");
+        } else if (response.status === 404) {
+          toast.error("Email tidak ditemukan. Silakan registrasi ulang.");
+        } else if (response.status === 429) {
+          toast.error("Terlalu banyak percobaan. Coba lagi nanti.");
+        } else {
+          toast.error(getErrorMessage(data, "verify"));
+        }
       }
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      console.log("Network error:", err);
+      toast.error(getErrorMessage(err, "network"));
     }
   };
 
   const handleResendOtp = async () => {
     if (!canResend) return;
 
-    console.log("Resending OTP for email:", userEmail);
     if (!userEmail) {
-      toast.error("Email tidak ditemukan. Silakan registrasi ulang.");
+      toast.error("Terjadi kesalahan. Silakan registrasi ulang.");
       return;
     }
 
@@ -202,8 +296,9 @@ const RegistComp = () => {
       });
 
       const data = await response.json();
+
       if (response.ok) {
-        toast.success("OTP dikirim ulang ke email");
+        toast.success("Kode OTP baru telah dikirim!");
 
         localStorage.setItem(
           "otp_verification_state",
@@ -216,17 +311,29 @@ const RegistComp = () => {
         setResendTimer(OTP_RESEND_WAIT_SECONDS);
         setCanResend(false);
       } else {
-        const errorMsg = getErrorMessage(data);
-        const waitMatch = errorMsg.match(/wait (\d+) seconds/);
-        if (waitMatch) {
-          const remainingSeconds = parseInt(waitMatch[1]);
-          setResendTimer(remainingSeconds);
-          setCanResend(false);
+        if (response.status === 429) {
+          const errorMsg = getErrorMessage(data, "resend");
+          const waitMatch =
+            errorMsg.match(/wait (\d+) seconds/i) ||
+            errorMsg.match(/(\d+) detik/i);
+
+          if (waitMatch) {
+            const remainingSeconds = parseInt(waitMatch[1]);
+            setResendTimer(remainingSeconds);
+            setCanResend(false);
+            toast.error(`Tunggu beberapa saat lagi sebelum mengirim ulang`);
+          } else {
+            toast.error(
+              "Terlalu banyak permintaan. Tunggu beberapa saat lagi!"
+            );
+          }
+        } else {
+          toast.error(getErrorMessage(data, "resend"));
         }
-        toast.error(errorMsg);
       }
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      console.log("Network error:", err);
+      toast.error("Terjadi kesalahan jaringan. Silakan coba lagi.");
     }
   };
 
@@ -240,7 +347,31 @@ const RegistComp = () => {
 
   return (
     <section>
-      <Toaster />
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: "#fff",
+            color: "#363636",
+            fontSize: "14px",
+            borderRadius: "8px",
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+          },
+          success: {
+            iconTheme: {
+              primary: "#10B981",
+              secondary: "#fff",
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: "#EF4444",
+              secondary: "#fff",
+            },
+          },
+        }}
+      />
       <div className="flex items-center justify-center min-h-screen px-4 bg-gradient-to-b from-indigo-50 via-white to-white">
         <div className="w-full max-w-md p-8 bg-white shadow-lg rounded-2xl">
           {isInitializing ? (
@@ -277,10 +408,13 @@ const RegistComp = () => {
                       id="otpCode"
                       name="otpCode"
                       value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Masukkan kode OTP"
+                      onChange={(e) =>
+                        setOtpCode(e.target.value.replace(/\D/g, ""))
+                      }
+                      className="w-full px-4 py-3 text-lg tracking-widest text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="000000"
                       maxLength="6"
+                      inputMode="numeric"
                     />
                     <p className="mt-2 text-xs text-gray-500">
                       Periksa folder spam jika tidak ditemukan di inbox
@@ -297,7 +431,7 @@ const RegistComp = () => {
                   <button
                     type="button"
                     onClick={handleBackToRegister}
-                    className="w-full py-2 !mt-3 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-100"
+                    className="w-full py-2 !mt-3 text-sm font-medium text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
                   >
                     Kembali ke Registrasi
                   </button>
@@ -345,7 +479,7 @@ const RegistComp = () => {
                     />
                     {formErrors.fullName && (
                       <p className="mt-1 text-sm text-red-500">
-                        Nama lengkap harus diisi
+                        {formErrors.fullName}
                       </p>
                     )}
                   </div>
@@ -367,7 +501,7 @@ const RegistComp = () => {
                     />
                     {formErrors.email && (
                       <p className="mt-1 text-sm text-red-500">
-                        Email harus diisi dengan benar
+                        {formErrors.email}
                       </p>
                     )}
                   </div>
@@ -404,7 +538,7 @@ const RegistComp = () => {
                     </div>
                     {formErrors.password && (
                       <p className="mt-1 text-sm text-red-500">
-                        Password harus diisi
+                        {formErrors.password}
                       </p>
                     )}
                   </div>
@@ -441,7 +575,7 @@ const RegistComp = () => {
                     </div>
                     {formErrors.confirmationPassword && (
                       <p className="mt-1 text-sm text-red-500">
-                        Konfirmasi password wajib diisi
+                        {formErrors.confirmationPassword}
                       </p>
                     )}
                   </div>
