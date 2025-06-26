@@ -72,7 +72,7 @@ const RegistComp = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       const savedOtpState = localStorage.getItem("otp_verification_state");
-      const EXPIRY_DURATION_MS = 0.5 * 60 * 1000;
+      const EXPIRY_DURATION_MS = 2.5 * 60 * 1000;
 
       if (savedOtpState) {
         const { timestamp } = JSON.parse(savedOtpState);
@@ -89,7 +89,7 @@ const RegistComp = () => {
           setUserEmail("");
         }
       }
-    }, 1 * 1000);
+    }, 30 * 1000);
 
     return () => clearInterval(interval);
   }, []);
@@ -276,12 +276,6 @@ const RegistComp = () => {
         body: JSON.stringify({ email: userEmail, otpCode }),
       });
 
-      if (errorMsg.includes("OTP is invalid or has expired.")) {
-        toast.error("silahkan coba registrasi ulang");
-        localStorage.removeItem("otp_verification_state");
-        handleBackToRegister();
-      }
-
       const data = await response.json();
 
       if (response.ok) {
@@ -295,6 +289,7 @@ const RegistComp = () => {
 
         if (errorMsg.includes("OTP is invalid or has expired.")) {
           toast.error("silahkan coba registrasi ulang");
+          localStorage.removeItem("otp_verification_state");
           handleBackToRegister();
         } else if (response.status === 400) {
           toast.error("Kode OTP tidak valid atau sudah kedaluwarsa");
@@ -438,7 +433,7 @@ const RegistComp = () => {
                   <div className="flex flex-col gap-2">
                     <label
                       htmlFor="otpCode"
-                      className="block mb-1 text-gray-600"
+                      className="block mb-1 text-center text-gray-600"
                     >
                       Kode OTP:
                     </label>
@@ -455,7 +450,7 @@ const RegistComp = () => {
                       maxLength="6"
                       inputMode="numeric"
                     />
-                    <p className="mt-2 text-xs text-gray-500">
+                    <p className="mt-2 text-xs text-center text-gray-500">
                       Periksa folder spam jika tidak ditemukan di inbox
                     </p>
                   </div>
