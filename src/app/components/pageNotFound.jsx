@@ -10,7 +10,7 @@ export const PageNotFound = () => {
       <p className="mt-2 text-lg text-gray-600">
         Sepertinya kamu nyasar... Halaman yang kamu cari tidak tersedia.
       </p>
-      <Link href="/">
+      <Link href="/home">
         <button className="px-6 py-2 mt-6 text-xl text-white transition bg-indigo-500 rounded hover:bg-indigo-600">
           Kembali ke Beranda
         </button>
